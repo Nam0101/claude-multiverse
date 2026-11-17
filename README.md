@@ -4,7 +4,9 @@ A theme mod for Claude Code. Every new session lands in one of fourteen dark uni
 works at its desk there: it thinks, types, reads, runs commands, hits errors and stretches when it's done.
 Subagents arrive through portals from other universes.
 
-![All fourteen universes](assets/overview.jpg)
+![Claude in Galactic War: thinking, running a command, two subagent portals opening, ultra, done, then jumps to Dragonfire, The Deep and Clockwork](assets/demo.gif)
+
+*Recorded from the mod's own scenes and above-prompt band; the window around them is a mock-up.*
 
 [Tiếng Việt](#tiếng-việt)
 
@@ -31,6 +33,8 @@ The animated backdrop and the tiny Claude above the prompt show in the Claude de
 In a terminal you get the universe's name in the mode line.
 
 ## The universes
+
+![All fourteen universes](assets/overview.jpg)
 
 | Universe | Claude is | Feel |
 | --- | --- | --- |
