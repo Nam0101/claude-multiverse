@@ -1,6 +1,6 @@
 # Claude Multiverse
 
-A theme mod for Claude Code. Every new session lands in one of fourteen dark universes, and the Claude critter
+A theme mod for Claude Code. Every new session lands in one of thirty-four dark universes, and the Claude critter
 works at its desk there: it thinks, types, reads, runs commands, hits errors and stretches when it's done.
 Subagents arrive through portals from other universes.
 
@@ -39,7 +39,7 @@ is on a sparking ULTRA row above the prompt.
 
 ## The universes
 
-![All fourteen universes](assets/overview.jpg)
+![All thirty-four universes](assets/overview.jpg)
 
 | Universe | Claude is | Feel |
 | --- | --- | --- |
@@ -53,9 +53,29 @@ is on a sparking ULTRA row above the prompt.
 | Dragonfire | a wizard in a castle tower | intense |
 | Dinosaurs | a cave dweller | intense |
 | Storm Pirates | a captain on deck in a storm | intense |
+| Red Planet | a colonist in a habitat dome | intense |
+| Wild West | a telegraph operator in a frontier town | intense |
+| Pharaoh's Tomb | a scribe in a torchlit tomb | intense |
+| Lightning Lab | a mad scientist at the big lever | intense |
+| Ninja Moon | a ninja under a red moon | intense |
+| Colosseum | a scribe in the arena stands | intense |
+| Storm Chaser | a storm chaser with a tornado ahead | intense |
+| Robot Factory | a line supervisor over the robot arms | intense |
+| Grand Prix | a race engineer on the pit wall | intense |
+| Carnival | a ride operator in the control booth | intense |
+| Arena Rock | the sound engineer at a stadium show | intense |
+| Underworld | the keeper of the ledger by the river of souls | intense |
+| Lunar New Year | a festival host at the lion dance | intense |
+| Lost Temple | an explorer at a jungle temple | intense |
+| The Heist | a safecracker in the vault hall | intense |
+| Halloween | a witch by a haunted house | intense |
+| Deep Forge | a smith in a forge under the mountain | intense |
+| Summit | a mountaineer in a tent on the ridge | intense |
 | Mag Tape '84 | a machine-room engineer | calm |
 | The Deep | a diver in a diving bell | calm |
 | Clockwork | a mechanic in a brass workshop | calm |
+| Polar Night | a researcher in an ice station | calm |
+| Sky Whales | a dreamer on a rooftop | calm |
 | The Void | just the hands | rare |
 
 Intense universes come up more often. Each one has its own color palette for the whole app.
@@ -99,7 +119,7 @@ plugin-authoring kit and are not covered by it.
 
 ## Tiếng Việt
 
-Mod giao diện cho Claude Code. Mỗi phiên mới rơi vào một trong mười bốn vũ trụ tối, và chú Claude ngồi làm việc ở
+Mod giao diện cho Claude Code. Mỗi phiên mới rơi vào một trong ba mươi tư vũ trụ tối, và chú Claude ngồi làm việc ở
 bàn của mình trong đó: suy nghĩ, gõ phím, đọc file, chạy lệnh, gặp lỗi, vươn vai khi xong. Subagent hiện ra qua
 những cánh cổng từ vũ trụ khác.
 

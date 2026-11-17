@@ -2,23 +2,43 @@ import type { ThemeBackdropGlass, ThemeSetArgs } from 'claude-code'
 
 import type { Activity, Desk } from '../types'
 import { makeColors } from './make-colors.js'
+import { arenaRockWorld } from './scenes/arena-rock'
 import { blackHoleWorld } from './scenes/black-hole'
+import { carnivalWorld } from './scenes/carnival'
 import { clockworkWorld } from './scenes/clockwork'
 import { collapseWorld } from './scenes/collapse'
+import { colosseumWorld } from './scenes/colosseum'
 import { deepWorld } from './scenes/deep'
+import { deepForgeWorld } from './scenes/deep-forge'
 import { dinosaursWorld } from './scenes/dinosaurs'
 import { dragonfireWorld } from './scenes/dragonfire'
 import { galacticWarWorld } from './scenes/galactic-war'
+import { grandPrixWorld } from './scenes/grand-prix'
+import { halloweenWorld } from './scenes/halloween'
+import { heistWorld } from './scenes/heist'
 import { kaijuWorld } from './scenes/kaiju'
 import { COMMON, CORNER, frame } from './scenes/kit'
 import type { Insets } from './scenes/kit'
+import { lightningLabWorld } from './scenes/lightning-lab'
+import { lostTempleWorld } from './scenes/lost-temple'
+import { lunarNewYearWorld } from './scenes/lunar-new-year'
 import { neonWorld } from './scenes/neon-2099'
+import { ninjaMoonWorld } from './scenes/ninja-moon'
 import { originWorld } from './scenes/origin'
+import { pharaohWorld } from './scenes/pharaoh'
+import { polarNightWorld } from './scenes/polar-night'
+import { redPlanetWorld } from './scenes/red-planet'
 import { RIG_STYLE, deskScene } from './scenes/rig'
+import { robotFactoryWorld } from './scenes/robot-factory'
+import { skyWhalesWorld } from './scenes/sky-whales'
+import { stormChaserWorld } from './scenes/storm-chaser'
 import { stormPiratesWorld } from './scenes/storm-pirates'
+import { summitWorld } from './scenes/summit'
 import { tape84World } from './scenes/tape-84'
 import { undeadWorld } from './scenes/undead'
+import { underworldWorld } from './scenes/underworld'
 import { voidWorld } from './scenes/void'
+import { wildWestWorld } from './scenes/wild-west'
 import type { World } from './scenes/world'
 
 type Anchors = {
@@ -56,8 +76,9 @@ export type Universe = {
 // The loud universes come up half again as often as a calm one, under a thinner veil so their set pieces show.
 const LOUD = 1.5
 
-function loudGlass(tint: string): ThemeBackdropGlass {
-  return { blur: 10, tint, opacity: 0.44 }
+/** `opacity` goes up where a set piece's brightest moment would leave the chat's secondary text under 4.5:1. */
+function loudGlass(tint: string, opacity = 0.44): ThemeBackdropGlass {
+  return { blur: 10, tint, opacity }
 }
 
 export const UNIVERSES: readonly Universe[] = [
@@ -203,7 +224,7 @@ export const UNIVERSES: readonly Universe[] = [
       'text-muted': '#9d988f',
     },
     roles: { accent: '#f2b56b', danger: '#ff6a5a', success: '#6fd39a', warning: '#ffd36b', pro: '#7ab8ff' },
-    glass: loudGlass('#060608'),
+    glass: loudGlass('#060608', 0.56),
     world: blackHoleWorld,
   },
   {
@@ -224,7 +245,7 @@ export const UNIVERSES: readonly Universe[] = [
     },
     roles: { accent: '#ff6a3d', danger: '#e8455a', success: '#7fcf6a', warning: '#f0b44a', pro: '#b07cff' },
     fills: { danger: 400 },
-    glass: loudGlass('#120b0c'),
+    glass: loudGlass('#120b0c', 0.54),
     world: dragonfireWorld,
   },
   {
@@ -245,7 +266,7 @@ export const UNIVERSES: readonly Universe[] = [
     },
     roles: { accent: '#ff9a2a', danger: '#f0583a', success: '#7fbf5a', warning: '#ffd04a', pro: '#b08fd8' },
     fills: { danger: 400 },
-    glass: loudGlass('#110d08'),
+    glass: loudGlass('#110d08', 0.54),
     world: dinosaursWorld,
   },
   {
@@ -267,6 +288,376 @@ export const UNIVERSES: readonly Universe[] = [
     roles: { accent: '#ffd04d', danger: '#ff6058', success: '#5fd3a0', warning: '#ff9a4a', pro: '#a99bff' },
     glass: loudGlass('#070c11'),
     world: stormPiratesWorld,
+  },
+  {
+    id: 'red-planet',
+    name: 'Red Planet',
+    role: 'Colonist',
+    machine: 'a terminal in the habitat dome',
+    around: 'red dunes, two moons, a rocket on the pad',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0d060e',
+      'surface-1': '#150a15',
+      'surface-2': '#1b0e1b',
+      'surface-3': '#231324',
+      'text-primary': '#f6eaf0',
+      'text-secondary': '#beb3ba',
+      'text-muted': '#948a91',
+    },
+    roles: { accent: '#ff7a45', danger: '#ff5a4e', success: '#5fd3a0', warning: '#ffc247', pro: '#b48cff' },
+    glass: loudGlass('#0d060e'),
+    world: redPlanetWorld,
+  },
+  {
+    id: 'wild-west',
+    name: 'Wild West',
+    role: 'Telegraph operator',
+    machine: 'a telegraph key beside the laptop',
+    around: 'a frontier town at night, a train on the trestle',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0b0912',
+      'surface-1': '#13101d',
+      'surface-2': '#1b1728',
+      'surface-3': '#241e34',
+      'text-primary': '#f4efe6',
+      'text-secondary': '#cdc3b6',
+      'text-muted': '#a09685',
+    },
+    roles: { accent: '#e8a23c', danger: '#e5543c', success: '#6fbf73', warning: '#f2c14e', pro: '#c9803a' },
+    fills: { pro: 400 },
+    gitLift: 0.04,
+    glass: loudGlass('#0b0912'),
+    world: wildWestWorld,
+  },
+  {
+    id: 'pharaoh',
+    name: "Pharaoh's Tomb",
+    role: 'Tomb scribe',
+    machine: 'a laptop on a stone altar, torches',
+    around: 'pyramids under the moon, sand pouring',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#09070f',
+      'surface-1': '#110d1a',
+      'surface-2': '#191325',
+      'surface-3': '#231a33',
+      'text-primary': '#f3eee6',
+      'text-secondary': '#cdc5bb',
+      'text-muted': '#9f968c',
+    },
+    roles: { accent: '#d9a441', danger: '#e0533f', success: '#3fb8a8', warning: '#e8b84a', pro: '#4a7bd8' },
+    fills: { danger: 400 },
+    glass: loudGlass('#09070f'),
+    world: pharaohWorld,
+  },
+  {
+    id: 'lightning-lab',
+    name: 'Lightning Lab',
+    role: 'Mad scientist',
+    machine: 'a laptop wired to a big lever',
+    around: 'lightning towers, bubbling flasks',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#090c14',
+      'surface-1': '#0f1320',
+      'surface-2': '#131828',
+      'surface-3': '#181e30',
+      'text-primary': '#e9f1ff',
+      'text-secondary': '#b1b8c4',
+      'text-muted': '#8b919c',
+    },
+    roles: { accent: '#7fd4ff', danger: '#ff5c6c', success: '#4ade80', warning: '#ffc247', pro: '#b08cff' },
+    glass: loudGlass('#090c14'),
+    world: lightningLabWorld,
+  },
+  {
+    id: 'ninja-moon',
+    name: 'Ninja Moon',
+    role: 'Ninja',
+    machine: 'a laptop on a low table, a paper lantern',
+    around: 'a castle under a red moon, ninjas on the rooftops',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0a0810',
+      'surface-1': '#110e19',
+      'surface-2': '#161320',
+      'surface-3': '#1d1a2a',
+      'text-primary': '#f1ecf2',
+      'text-secondary': '#cbc5d0',
+      'text-muted': '#9d97a8',
+    },
+    roles: { accent: '#d9344a', danger: '#ff6b6b', success: '#6fd3b0', warning: '#ffb35a', pro: '#a99bff' },
+    fills: { pro: 400 },
+    glass: loudGlass('#0a0810'),
+    world: ninjaMoonWorld,
+  },
+  {
+    id: 'colosseum',
+    name: 'Colosseum',
+    role: 'Scribe in the stands',
+    machine: 'a laptop on a marble ledge',
+    around: 'a torchlit arena, chariots racing',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0c0907',
+      'surface-1': '#16120e',
+      'surface-2': '#1d1812',
+      'surface-3': '#251e17',
+      'text-primary': '#f4eee4',
+      'text-secondary': '#cfc6b8',
+      'text-muted': '#a39a8b',
+    },
+    roles: { accent: '#d9a93c', danger: '#e8505b', success: '#6cc08b', warning: '#ff9a3a', pro: '#a98be0' },
+    fills: { danger: 400, pro: 400 },
+    glass: loudGlass('#0c0907'),
+    world: colosseumWorld,
+  },
+  {
+    id: 'storm-chaser',
+    name: 'Storm Chaser',
+    role: 'Storm chaser',
+    machine: 'a radar laptop in a pickup',
+    around: 'the plains, a tornado',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#070b12',
+      'surface-1': '#0c121b',
+      'surface-2': '#121a25',
+      'surface-3': '#1a2431',
+      'text-primary': '#eef3f7',
+      'text-secondary': '#c3cbd3',
+      'text-muted': '#9ca6b0',
+    },
+    roles: { accent: '#5fe0a0', danger: '#e5484d', success: '#3fbf6f', warning: '#e9b949', pro: '#7d5cf0' },
+    gitLift: 0.04,
+    glass: loudGlass('#070b12'),
+    world: stormChaserWorld,
+  },
+  {
+    id: 'robot-factory',
+    name: 'Robot Factory',
+    role: 'Line supervisor',
+    machine: 'a control desk over the line',
+    around: 'robot arms building robots',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0a0d12',
+      'surface-1': '#10151c',
+      'surface-2': '#151b23',
+      'surface-3': '#1b222b',
+      'text-primary': '#f0ece0',
+      'text-secondary': '#b6b4ac',
+      'text-muted': '#8f8e89',
+    },
+    roles: { accent: '#ffb21f', danger: '#ff5a4a', success: '#4ade80', warning: '#ff9a3a', pro: '#8fe8ff' },
+    glass: loudGlass('#0a0d12'),
+    world: robotFactoryWorld,
+  },
+  {
+    id: 'grand-prix',
+    name: 'Grand Prix',
+    role: 'Race engineer',
+    machine: "the pit wall's screens",
+    around: 'cars streaking past under floodlights',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#070913',
+      'surface-1': '#0e121e',
+      'surface-2': '#151b2b',
+      'surface-3': '#1d2538',
+      'text-primary': '#eef3fa',
+      'text-secondary': '#c3cbd9',
+      'text-muted': '#9ca6b8',
+    },
+    roles: { accent: '#5fd0ff', danger: '#e5484d', success: '#3fbf6f', warning: '#ffc15a', pro: '#7d5cf0' },
+    gitLift: 0.08,
+    glass: loudGlass('#070913'),
+    world: grandPrixWorld,
+  },
+  {
+    id: 'carnival',
+    name: 'Carnival',
+    role: 'Ride operator',
+    machine: 'a control booth with levers',
+    around: 'a ferris wheel, a roller coaster',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#120c20',
+      'surface-1': '#181028',
+      'surface-2': '#1e1530',
+      'surface-3': '#251a38',
+      'text-primary': '#f6efff',
+      'text-secondary': '#d0c3e2',
+      'text-muted': '#a496ba',
+    },
+    roles: { accent: '#ff5f9e', danger: '#ef6a5e', success: '#58c98a', warning: '#f2b84a', pro: '#a98bff' },
+    glass: loudGlass('#120c20'),
+    world: carnivalWorld,
+  },
+  {
+    id: 'arena-rock',
+    name: 'Arena Rock',
+    role: 'Sound engineer',
+    machine: 'a laptop and a mixer on a flight case',
+    around: 'a band on a huge stage, a crowd with their hands up',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#07040f',
+      'surface-1': '#0d0818',
+      'surface-2': '#130c20',
+      'surface-3': '#190f28',
+      'text-primary': '#f7f1ff',
+      'text-secondary': '#d0c6e0',
+      'text-muted': '#a99dc0',
+    },
+    roles: { accent: '#ff3fa4', danger: '#e5484d', success: '#4cd98a', warning: '#ffb02e', pro: '#9a5cff' },
+    glass: loudGlass('#07040f'),
+    world: arenaRockWorld,
+  },
+  {
+    id: 'underworld',
+    name: 'Underworld',
+    role: 'Keeper of the ledger',
+    machine: 'a laptop on an old ledger desk, a soul-fire lantern',
+    around: 'a glowing river, a ferryman, a great iron gate',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#040b0d',
+      'surface-1': '#081418',
+      'surface-2': '#0d1c21',
+      'surface-3': '#12242a',
+      'text-primary': '#eefaf6',
+      'text-secondary': '#c1d6d1',
+      'text-muted': '#92aaa5',
+    },
+    roles: { accent: '#4ff0d0', danger: '#e5584d', success: '#5dd68a', warning: '#e0b84a', pro: '#7a8cff' },
+    fills: { pro: 400 },
+    glass: loudGlass('#040b0d', 0.5),
+    world: underworldWorld,
+  },
+  {
+    id: 'lunar-new-year',
+    name: 'Lunar New Year',
+    role: 'Festival host',
+    machine: 'a red lacquer laptop on a low table',
+    around: 'a lion dance, red lanterns, firecrackers',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#140808',
+      'surface-1': '#1d0f0d',
+      'surface-2': '#251412',
+      'surface-3': '#2d1918',
+      'text-primary': '#fbf0e6',
+      'text-secondary': '#c1b6ae',
+      'text-muted': '#9a8f89',
+    },
+    roles: { accent: '#f2b134', danger: '#ff5a4d', success: '#7ccf7a', warning: '#ffb23f', pro: '#d98bc2' },
+    gitLift: 0.04,
+    glass: loudGlass('#140808'),
+    world: lunarNewYearWorld,
+  },
+  {
+    id: 'lost-temple',
+    name: 'Lost Temple',
+    role: 'Explorer',
+    machine: 'a rugged laptop on a crate, a lantern',
+    around: 'a carved stone face in the jungle, a rope bridge',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#06100e',
+      'surface-1': '#0c1816',
+      'surface-2': '#101e1b',
+      'surface-3': '#15251f',
+      'text-primary': '#e9f3ee',
+      'text-secondary': '#b0bab6',
+      'text-muted': '#8a9490',
+    },
+    roles: { accent: '#3dffc0', danger: '#e8604a', success: '#7cd67a', warning: '#e8a030', pro: '#b48cff' },
+    glass: loudGlass('#06100e'),
+    world: lostTempleWorld,
+  },
+  {
+    id: 'heist',
+    name: 'The Heist',
+    role: 'Safecracker',
+    machine: 'a laptop tapped into the security panel',
+    around: 'a vault door, a diamond behind laser beams',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0a0c12',
+      'surface-1': '#0f1219',
+      'surface-2': '#141822',
+      'surface-3': '#1b1f2a',
+      'text-primary': '#eef1f8',
+      'text-secondary': '#c1c7d6',
+      'text-muted': '#949cb0',
+    },
+    roles: { accent: '#ff3a4c', danger: '#ff5a2a', success: '#4cff9a', warning: '#ffcb4d', pro: '#69d6ff' },
+    glass: loudGlass('#0a0c12'),
+    world: heistWorld,
+  },
+  {
+    id: 'halloween',
+    name: 'Halloween',
+    role: 'Witch',
+    machine: 'a laptop beside a bubbling cauldron',
+    around: "a haunted house under an orange moon, jack-o'-lanterns",
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0d0814',
+      'surface-1': '#130c1c',
+      'surface-2': '#191124',
+      'surface-3': '#20172c',
+      'text-primary': '#f3eef8',
+      'text-secondary': '#cdc5d8',
+      'text-muted': '#9d92ac',
+    },
+    roles: { accent: '#ff9a3c', danger: '#e84a5a', success: '#7be04f', warning: '#ffc15a', pro: '#b48cff' },
+    glass: loudGlass('#0d0814', 0.52),
+    world: halloweenWorld,
+  },
+  {
+    id: 'deep-forge',
+    name: 'Deep Forge',
+    role: 'Smith',
+    machine: 'an iron laptop by the anvil',
+    around: 'a forge hall under the mountain, a trip-hammer, rivers of lava',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#0d0705',
+      'surface-1': '#150b08',
+      'surface-2': '#1d110c',
+      'surface-3': '#261710',
+      'text-primary': '#fff1e3',
+      'text-secondary': '#d9c4b0',
+      'text-muted': '#ac9684',
+    },
+    roles: { accent: '#ff8a2a', danger: '#ff5040', success: '#6fd08c', warning: '#ffcf6a', pro: '#b48cff' },
+    glass: loudGlass('#0d0705'),
+    world: deepForgeWorld,
+  },
+  {
+    id: 'summit',
+    name: 'Summit',
+    role: 'Mountaineer',
+    machine: 'a frosted laptop in the tent door',
+    around: 'a knife-edge peak above the clouds, headlamps on the face',
+    weight: LOUD,
+    anchors: {
+      'surface-0': '#070a12',
+      'surface-1': '#0d1220',
+      'surface-2': '#131a2b',
+      'surface-3': '#1a2338',
+      'text-primary': '#eef4ff',
+      'text-secondary': '#c0c9dc',
+      'text-muted': '#8f9bb5',
+    },
+    roles: { accent: '#6cb8ff', danger: '#ff5e5e', success: '#5fe39a', warning: '#ffb84d', pro: '#b48cff' },
+    gitLift: 0.04,
+    glass: loudGlass('#070a12', 0.52),
+    world: summitWorld,
   },
   {
     id: 'tape-84',
@@ -332,6 +723,46 @@ export const UNIVERSES: readonly Universe[] = [
     gitLift: 0.08,
     glass: { blur: 16, tint: '#17120d', opacity: 0.5 },
     world: clockworkWorld,
+  },
+  {
+    id: 'polar-night',
+    name: 'Polar Night',
+    role: 'Polar researcher',
+    machine: 'a laptop in an ice station',
+    around: 'a glacier, the northern lights, a polar bear',
+    weight: 1,
+    anchors: {
+      'surface-0': '#050b12',
+      'surface-1': '#0b141d',
+      'surface-2': '#101a25',
+      'surface-3': '#16212e',
+      'text-primary': '#eaf4fa',
+      'text-secondary': '#b8c5cf',
+      'text-muted': '#8999a5',
+    },
+    roles: { accent: '#5ee0b8', danger: '#ff6b6b', success: '#5fe0a0', warning: '#ffc857', pro: '#a88bff' },
+    glass: { blur: 16, tint: '#050b12', opacity: 0.5 },
+    world: polarNightWorld,
+  },
+  {
+    id: 'sky-whales',
+    name: 'Sky Whales',
+    role: 'Dreamer',
+    machine: 'a laptop on a rooftop crate',
+    around: 'whales swimming through the clouds',
+    weight: 1,
+    anchors: {
+      'surface-0': '#080c1e',
+      'surface-1': '#0c1228',
+      'surface-2': '#111832',
+      'surface-3': '#161e3a',
+      'text-primary': '#eef2ff',
+      'text-secondary': '#c0c9e6',
+      'text-muted': '#929dc2',
+    },
+    roles: { accent: '#8fb4ff', danger: '#ef7a8a', success: '#6fd3a6', warning: '#f0b95a', pro: '#b59cff' },
+    glass: { blur: 16, tint: '#080c1e', opacity: 0.5 },
+    world: skyWhalesWorld,
   },
   {
     id: 'void',
