@@ -1,0 +1,9 @@
+{
+  "name": "multiverse",
+  "version": "0.3.0",
+  "description": "Claude Code in the multiverse: every new session lands in one of fourteen dark universes, from galactic war and a zombie siege to a collapsing reality, where the Claude critter's desk shows thinking, typing, tool calls, errors and done, subagents arrive through portals, ultracode/ultrathink powers it up, and the picture fits between the desktop app's side panels.",
+  "author": { "name": "Nam0101" },
+  "homepage": "https://github.com/Nam0101/claude-multiverse",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "claude-multiverse",
+  "owner": { "name": "Nam0101" },
+  "plugins": [{ "name": "multiverse", "source": "./" }]
+}
