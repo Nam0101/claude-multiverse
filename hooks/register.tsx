@@ -224,12 +224,9 @@ async function setUltra($: EngineInterface, isUltra: boolean): Promise<void> {
   await update($, ultra, was => (was.session === isUltra ? was : { ...was, session: isUltra }))
 }
 
-/** Whether `/effort <args>` leaves ultracode on: `ultracode` or `ultracode on`; `ultracode off` or a level ends it. */
-function ultraOfArgs(args: string): boolean {
-  const [word = '', state] = args.trim().toLowerCase().split(/\s+/)
-
-  return /^ultra/.test(word) && state !== 'off'
-}
+// Only /effort's output row says what became of ultracode, typed with arguments or picked in its menu alike:
+// `Ultracode on (this session only): …`, `Ultracode off. …`, or `… · Ultracode off` after a level.
+const ULTRACODE_SAID = /<local-command-stdout>[\s\S]*?\bUltracode (on|off)\b/i
 
 function listText(current: Universe | undefined): string {
   return [
@@ -351,33 +348,28 @@ export const register: Register = on => {
 
   on('prompt.submit', async ($, e, next) => {
     const text = e.text.trim()
-    const effort = /^\/effort\s+(.+)$/i.exec(text)
-
     settling?.cancel()
 
-    if (effort !== null) {
-      await setUltra($, ultraOfArgs(effort[1]!))
-    } else if (/\bultra(code|think)\b/i.test(text)) {
+    // A slash command is no prompt: `/effort ultracode` tells its outcome in its output row.
+    if (!text.startsWith('/') && /\bultra(code|think)\b/i.test(text)) {
       await update($, ultra, was => ({ ...was, turn: true }))
     }
 
     return next(e)
   })
 
-  // Where the engine raises its own commands to plugins, `/effort` lands here as well as in the prompt.
-  // Its output line says what became of ultracode, which the picker (`/effort` alone) tells nowhere else:
-  // `Ultracode on (this session only): …`, `Ultracode off. …`, or `… · Ultracode off` after a level.
-  on('command.run', { command: 'effort' }, async ($, e, next) => {
-    const result = await next(e)
-    const said = /\bUltracode (on|off)\b/i.exec(result.text ?? '')
+  // The picker hands `command.run` no text, so the row the session keeps of /effort's output is where it shows.
+  on('session.append', { door: 'command' }, async ($, e, next) => {
+    if (e.agentId === undefined) {
+      const text = e.message.content.map(block => (block.type === 'text' ? String(block.text) : '')).join('\n')
+      const said = ULTRACODE_SAID.exec(text)
 
-    if (said !== null) {
-      await setUltra($, said[1]!.toLowerCase() === 'on')
-    } else if (result.text === undefined && e.args.trim() !== '') {
-      await setUltra($, ultraOfArgs(e.args))
+      if (said !== null) {
+        await setUltra($, said[1]!.toLowerCase() === 'on')
+      }
     }
 
-    return result
+    return next(e)
   })
 
   on('turn.start', async ($, e, next) => {

@@ -4,6 +4,10 @@ A theme mod for Claude Code. Every new session lands in one of fourteen dark uni
 works at its desk there: it thinks, types, reads, runs commands, hits errors and stretches when it's done.
 Subagents arrive through portals from other universes.
 
+Whichever universe it lands in, Claude is the same hard worker. Under fire on a warship bridge, behind boarded-up
+windows with the undead outside, or in a reality coming apart at the seams, it sits down at its desk and gets the job
+done.
+
 ![Claude in Galactic War: thinking, running a command, two subagent portals opening, ultra, done, then jumps to Dragonfire, The Deep and Clockwork](assets/demo.gif)
 
 *Recorded from the mod's own scenes and above-prompt band; the window around them is a mock-up.*
@@ -98,6 +102,9 @@ plugin-authoring kit and are not covered by it.
 Mod giao diện cho Claude Code. Mỗi phiên mới rơi vào một trong mười bốn vũ trụ tối, và chú Claude ngồi làm việc ở
 bàn của mình trong đó: suy nghĩ, gõ phím, đọc file, chạy lệnh, gặp lỗi, vươn vai khi xong. Subagent hiện ra qua
 những cánh cổng từ vũ trụ khác.
+
+Dù rơi vào vũ trụ nào, Claude vẫn chăm chỉ như thế. Trên đài chỉ huy chiến hạm giữa làn đạn, sau những ô cửa bít
+ván với xác sống lảng vảng bên ngoài, hay giữa một thực tại đang vỡ vụn, Claude vẫn ngồi vào bàn và làm cho xong việc.
 
 ### Cài đặt
 
