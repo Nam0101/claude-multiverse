@@ -33,9 +33,9 @@ claude plugin install multiverse --marketplace Nam0101/claude-multiverse
 In the desktop app, where `/plugin` does not run: click **+** next to the prompt box, then **Plugins**,
 **Add marketplace** with `Nam0101/claude-multiverse`, then **Add plugin**.
 
-The animated backdrop and the tiny Claude above the prompt show in the Claude desktop app and the mobile app.
-In a terminal you get the universe's name in the mode line, and while ultra is on a sparking ULTRA row above the
-prompt.
+The animated backdrop and the tiny Claude above the prompt show in the Claude desktop app. The mobile app doesn't
+draw them, at least over Remote Control. In a terminal you get the universe's name in the mode line, and while ultra
+is on a sparking ULTRA row above the prompt.
 
 ## The universes
 
@@ -119,9 +119,9 @@ Trả lời `y` để thêm marketplace, rồi chọn scope (scope user nạp mo
 Trong app desktop (không chạy được `/plugin`): bấm **+** cạnh ô nhập, chọn **Plugins**, **Add marketplace** với
 `Nam0101/claude-multiverse`, rồi **Add plugin**.
 
-Phông nền động và chú Claude nhỏ phía trên ô nhập hiện trong app desktop và app điện thoại. Trong terminal thì
-có tên vũ trụ ở dòng chế độ, và khi bật ultra (`/effort ultracode`, gõ hay chọn trong `/effort` đều được) thì có
-một dòng ULTRA lấp lánh ánh vàng phía trên ô nhập.
+Phông nền động và chú Claude nhỏ phía trên ô nhập hiện trong app desktop. App điện thoại không vẽ chúng, ít nhất là
+khi điều khiển qua Remote Control. Trong terminal thì có tên vũ trụ ở dòng chế độ, và khi bật ultra
+(`/effort ultracode`, gõ hay chọn trong `/effort` đều được) thì có một dòng ULTRA lấp lánh ánh vàng phía trên ô nhập.
 
 ### Lệnh
 
