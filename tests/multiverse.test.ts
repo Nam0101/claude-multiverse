@@ -182,3 +182,77 @@ test('a new session shows the universe it landed in by name, then leaves the pic
   expect(await sourceOf(ui)).not.toContain('class="mvi-all"')
   await ui.unmount()
 })
+
+test('on the terminal, ultracode from the /effort picker sparks a row above the prompt and marks the mode line; a level ends it', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  on('theme.set', () => ({ value: { isDrawn: true, requestId: 'r1' } }))
+
+  // The engine's /effort, beneath the mod: the picker prints what it did and nothing else says so.
+  let printed = ''
+
+  on('command.run', { command: 'effort' }, () => ({ text: printed }))
+
+  // The mode line as it reaches the engine, beneath the mod's rewrite.
+  let modes: readonly string[] = []
+
+  on('ui.render', { component: 'SessionMode' }, (_, e, next) => {
+    modes = (e.props as { modes: readonly string[] }).modes
+
+    return next(e)
+  })
+
+  await $.command.run({ command: 'multiverse', args: 'galactic war', origin: TYPED, presentation: WIDE })
+
+  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  const mode = await $.ui.mount({ plugin: 'multiverse', surface: 'terminal', component: 'SessionMode', props: { modes: [] } })
+
+  expect(await band.find({ type: 'Client' })).toBeUndefined()
+  expect(modes).toEqual(['Galactic War'])
+
+  printed = 'Ultracode on (this session only): dynamic workflows on every task. Effort stays high.'
+  await $.command.run({ command: 'effort', args: '', origin: TYPED, presentation: WIDE })
+
+  const row = await band.find({ type: 'Client' })
+
+  expect(row?.props.props).toMatchObject({ name: 'Galactic War', doing: 'is waiting for you' })
+  expect((await band.find({ type: 'Text', text: 'Galactic War', in: 'ultra' }))?.props.color).toBe(
+    (row?.props.props as { accent: string }).accent,
+  )
+  expect(JSON.stringify(await band.drawn({ in: 'ultra' }))).toContain('"U"')
+  await mode.drawn()
+  expect(modes).toEqual(['Galactic War · ultra'])
+
+  printed = 'Set effort level to high (this session only): thorough · Ultracode off'
+  await $.command.run({ command: 'effort', args: 'high', origin: TYPED, presentation: WIDE })
+
+  expect(await band.find({ type: 'Client' })).toBeUndefined()
+  await mode.drawn()
+  expect(modes).toEqual(['Galactic War'])
+  await band.unmount()
+  await mode.unmount()
+})
+
+test('/effort ultracode off turns ultra off, and the desktop band keeps its tiny Claude', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  on('theme.set', () => ({ value: { isDrawn: true, requestId: 'r1' } }))
+
+  let printed = 'Ultracode on (this session only): dynamic workflows on every task. Effort stays high.'
+
+  on('command.run', { command: 'effort' }, () => ({ text: printed }))
+
+  await $.command.run({ command: 'multiverse', args: 'the deep', origin: TYPED, presentation: WIDE })
+  await $.command.run({ command: 'effort', args: 'ultracode', origin: TYPED, presentation: WIDE })
+
+  const ui = await $.ui.mount(BAND)
+
+  expect((await ui.find({ type: 'Text' }))?.text).toMatch(/ · ultra$/)
+
+  printed = 'Ultracode off. Effort stays high.'
+  await $.command.run({ command: 'effort', args: 'ultracode off', origin: TYPED, presentation: WIDE })
+
+  expect((await ui.find({ type: 'Text' }))?.text).toMatch(/· Claude is waiting for you$/)
+  expect(await ui.find({ type: 'Client' })).toBeUndefined()
+  await ui.unmount()
+})

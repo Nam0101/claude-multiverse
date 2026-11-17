@@ -220,10 +220,15 @@ async function moveTo($: EngineInterface, place: Universe): Promise<void> {
   await land($, place)
 }
 
-async function setEffort($: EngineInterface, level: string): Promise<void> {
-  const isUltra = /^ultra/i.test(level)
-
+async function setUltra($: EngineInterface, isUltra: boolean): Promise<void> {
   await update($, ultra, was => (was.session === isUltra ? was : { ...was, session: isUltra }))
+}
+
+/** Whether `/effort <args>` leaves ultracode on: `ultracode` or `ultracode on`; `ultracode off` or a level ends it. */
+function ultraOfArgs(args: string): boolean {
+  const [word = '', state] = args.trim().toLowerCase().split(/\s+/)
+
+  return /^ultra/.test(word) && state !== 'off'
 }
 
 function listText(current: Universe | undefined): string {
@@ -346,12 +351,12 @@ export const register: Register = on => {
 
   on('prompt.submit', async ($, e, next) => {
     const text = e.text.trim()
-    const effort = /^\/effort\s+(\S+)/i.exec(text)
+    const effort = /^\/effort\s+(.+)$/i.exec(text)
 
     settling?.cancel()
 
     if (effort !== null) {
-      await setEffort($, effort[1]!)
+      await setUltra($, ultraOfArgs(effort[1]!))
     } else if (/\bultra(code|think)\b/i.test(text)) {
       await update($, ultra, was => ({ ...was, turn: true }))
     }
@@ -360,14 +365,19 @@ export const register: Register = on => {
   })
 
   // Where the engine raises its own commands to plugins, `/effort` lands here as well as in the prompt.
+  // Its output line says what became of ultracode, which the picker (`/effort` alone) tells nowhere else:
+  // `Ultracode on (this session only): …`, `Ultracode off. …`, or `… · Ultracode off` after a level.
   on('command.run', { command: 'effort' }, async ($, e, next) => {
-    const level = e.args.trim().split(/\s+/)[0]
+    const result = await next(e)
+    const said = /\bUltracode (on|off)\b/i.exec(result.text ?? '')
 
-    if (level !== undefined && level !== '') {
-      await setEffort($, level)
+    if (said !== null) {
+      await setUltra($, said[1]!.toLowerCase() === 'on')
+    } else if (result.text === undefined && e.args.trim() !== '') {
+      await setUltra($, ultraOfArgs(e.args))
     }
 
-    return next(e)
+    return result
   })
 
   on('turn.start', async ($, e, next) => {
@@ -541,7 +551,7 @@ export const register: Register = on => {
 
   // The tiny Claude above the prompt: the same desk and the same moves, drawn crisp and light.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey || (e.surface !== 'desktop' && e.surface !== 'mobile')) {
+    if (e.props.hasSurvey || (e.surface !== 'desktop' && e.surface !== 'mobile' && e.surface !== 'terminal')) {
       return next(e)
     }
 
@@ -554,6 +564,24 @@ export const register: Register = on => {
     const now = await read($, desk)
     const power = await read($, ultra)
     const isUltra = power.session || power.turn
+
+    // The terminal draws no picture: while ultra is on it gets a sparking row of its own, animated by the terminal.
+    if (e.surface === 'terminal') {
+      if (!isUltra) {
+        return next(e)
+      }
+
+      const { Client } = $.ui.resolve(e)
+
+      return (
+        <Client
+          key="ultra"
+          module="./ultra-row.tsx"
+          props={{ name: place.name, accent: place.roles.accent, doing: DOING[now.activity] }}
+        />
+      )
+    }
+
     const band = bandOf(place, now, isUltra)
     const said = `${place.name} · Claude ${DOING[now.activity]}${isUltra ? ' · ultra' : ''}`
     const { Box, Svg, Text } = $.ui.resolve(e)
@@ -573,7 +601,11 @@ export const register: Register = on => {
       return next(e)
     }
 
-    return next({ ...e, props: { ...e.props, modes: [...e.props.modes, place.name] } })
+    const power = await read($, ultra)
+    // One label: the footer joins modes with "&", which a name like Kaiju & Mecha already holds.
+    const label = power.session || power.turn ? `${place.name} · ultra` : place.name
+
+    return next({ ...e, props: { ...e.props, modes: [...e.props.modes, label] } })
   })
 
   // Mag Tape '84's machines shout.

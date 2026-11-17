@@ -30,7 +30,8 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 **Add marketplace** with `Nam0101/claude-multiverse`, then **Add plugin**.
 
 The animated backdrop and the tiny Claude above the prompt show in the Claude desktop app and the mobile app.
-In a terminal you get the universe's name in the mode line.
+In a terminal you get the universe's name in the mode line, and while ultra is on a sparking ULTRA row above the
+prompt.
 
 ## The universes
 
@@ -61,7 +62,8 @@ Intense universes come up more often. Each one has its own color palette for the
   their own pose and their own reaction in the scene.
 - **Subagents.** Each running subagent opens a portal (up to three) on a Claude from another universe. A small
   Claude flies out to open it.
-- **Ultra.** `/effort ultracode`, or "ultracode" / "ultrathink" in a prompt, powers the desk up with a golden aura.
+- **Ultra.** `/effort ultracode` (typed or picked from `/effort`), or "ultracode" / "ultrathink" in a prompt, powers
+  the desk up with a golden aura. In a terminal, a gold shimmer runs over ULTRA above the prompt.
 - **Context.** Papers and cups pile up on the desk as the context fills; `/compact` clears them.
 - **Landing.** A new session shows the universe's name for a few seconds.
 
@@ -111,7 +113,8 @@ Trong app desktop (không chạy được `/plugin`): bấm **+** cạnh ô nh�
 `Nam0101/claude-multiverse`, rồi **Add plugin**.
 
 Phông nền động và chú Claude nhỏ phía trên ô nhập hiện trong app desktop và app điện thoại. Trong terminal thì
-chỉ có tên vũ trụ ở dòng chế độ.
+có tên vũ trụ ở dòng chế độ, và khi bật ultra (`/effort ultracode`, gõ hay chọn trong `/effort` đều được) thì có
+một dòng ULTRA lấp lánh ánh vàng phía trên ô nhập.
 
 ### Lệnh
 
