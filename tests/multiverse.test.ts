@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { SessionAppendInput } from 'claude-code'
+import type { PromptEditInput, PromptEditResult, SessionAppendInput } from 'claude-code'
 
 const BACKDROP = {
   plugin: 'multiverse',
@@ -255,5 +255,98 @@ test('/effort ultracode off turns ultra off, an unavailable ultracode changes no
   await $.session.append(effortRow('Ultracode off. Effort stays high.'))
   expect((await ui.find({ type: 'Text' }))?.text).toMatch(/· Claude is waiting for you$/)
   expect(await ui.find({ type: 'Client' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('typing turns Claude toward the prompt box, and it looks back a moment after the last key', async ($, on) => {
+  const clock = mock.clock(on)
+
+  on('prompt.edit', (_, e) => ({ text: e.text.slice(0, e.start) + e.inputText + e.text.slice(e.end), cursor: e.start + e.inputText.length }))
+
+  // The engine raises prompt.edit as the person types; a plugin never calls it, so `$.prompt` doesn't declare it.
+  const typed = $.prompt as unknown as { edit: (e: PromptEditInput) => Promise<PromptEditResult> }
+  const ui = await $.ui.mount(BACKDROP)
+  const box = await typed.edit({ origin: TYPED, text: 'h', cursor: 1, start: 1, end: 1, inputText: 'i' })
+
+  expect(box.text).toBe('hi')
+  await clock.advance(0)
+  expect(await sourceOf(ui)).toContain('class="st-idle st-listening"')
+  expect(await sourceOf(ui)).toContain('class="cl-dot"')
+
+  await clock.advance(3600)
+  expect(await sourceOf(ui)).toContain('class="st-idle"')
+  await ui.unmount()
+})
+
+test('a prompt pops an ! over its head, a call put to you raises its hand, and stopping the turn makes it jump', async ($, on) => {
+  const clock = mock.clock(on)
+
+  on('prompt.submit', (_, e) => ({ text: e.text }) as never)
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('tool.check', () => ({ decision: 'ask' }))
+  on('turn.complete', (_, e) => ({ text: e.answer }))
+
+  const ui = await $.ui.mount(BACKDROP)
+
+  await $.prompt.submit({ text: 'tidy the tests', wait: false, origin: TYPED })
+  expect(await sourceOf(ui)).toContain('class="st-idle st-heard"')
+
+  await $.turn.start({ text: 'tidy the tests', turnId: 't1' })
+  await clock.advance(800)
+  expect(await sourceOf(ui)).toContain('class="st-thinking"')
+
+  await clock.advance(1000)
+  await $.tool.check({ tool: 'Bash', input: { command: 'rm -rf build' }, tool_use_id: 'u1', approver: 'person' })
+  await clock.advance(1000)
+  expect(await sourceOf(ui)).toContain('class="st-idle st-asking"')
+
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: true, turnId: 't1', reason: 'answer' })
+  await clock.advance(1000)
+  expect(await sourceOf(ui)).toContain('class="st-idle st-startled"')
+
+  await clock.advance(3000)
+  expect(await sourceOf(ui)).toContain('class="st-idle"')
+  await ui.unmount()
+})
+
+test('an edit fills a diff card on the tool look, compacting sweeps the desk, and left alone Claude dozes off', async ($, on) => {
+  const clock = mock.clock(on)
+
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('tool.call', async () => ({ result: 'ok' }) as never)
+  on('turn.complete', (_, e) => ({ text: e.answer }))
+  // The summary takes a while to write.
+  on('session.compact', async () => {
+    await clock.advance(1000)
+    compacting = await sourceOf(ui)
+
+    return { skip: 'the test writes no summary' } as never
+  })
+  let compacting = ''
+
+  const ui = await $.ui.mount(BACKDROP)
+
+  await $.turn.start({ text: 'go', turnId: 't1' })
+  await clock.advance(1000)
+  await $.tool.call({ tool: 'Edit', input: { file_path: 'a.ts', old_string: 'a', new_string: 'b' }, tool_use_id: 'u1' } as never)
+  await clock.advance(1000)
+  expect(await sourceOf(ui)).toContain('class="st-tool st-editing"')
+  expect(await sourceOf(ui)).toContain('class="cl-ink"')
+
+  await $.turn.complete({ answer: 'done', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
+  await clock.advance(8000)
+  expect(await sourceOf(ui)).toContain('class="st-idle"')
+
+  await $.session.compact({
+    trigger: 'manual',
+    messages: [{ role: 'user', text: 'hi', toolUses: [] }],
+  } as never)
+  expect(compacting).toContain('class="st-idle st-tidying"')
+  await clock.advance(1600)
+  expect(await sourceOf(ui)).toContain('class="st-idle"')
+
+  await clock.advance(4 * 60_000 + 1000)
+  expect(await sourceOf(ui)).toContain('class="st-idle st-sleeping"')
+  expect(await sourceOf(ui)).toContain('class="cl-z"')
   await ui.unmount()
 })

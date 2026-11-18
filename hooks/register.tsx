@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
-import type { Activity, Panels } from '../types'
+import type { Act, Panels } from '../types'
 import {
   DOING,
   UNIVERSES,
@@ -45,9 +45,17 @@ const panels = atom({ plugin: 'multiverse', key: 'panels' } as const, BOTH)
 // How long a state stays on screen before the next one takes it: a quick Read between two lines of text would
 // otherwise flash the backdrop, which redraws whole on every change.
 const HOLD_MS = 900
-const HELD_MS: Partial<Record<Activity, number>> = { error: 2400, done: 1500 }
+const HELD_MS: Partial<Record<Act, number>> = { error: 2400, done: 1500, startled: 1400, tidying: 1500, heard: 700 }
 // After a reply, Claude stretches this long and then waits for you again.
 const SETTLE_MS = 6000
+// Claude watches you type and looks away this long after your last key.
+const LISTEN_MS = 2600
+// A prompt that starts no turn (most slash commands): the ! over its head fades after this long.
+const HEARD_MS = 2400
+// Stopped mid-turn: it jumps, then waits for you again after this long.
+const STARTLE_MS = 1800
+// Left waiting this long, Claude dozes off until something happens.
+const SLEEP_MS = 4 * 60_000
 // A newborn subagent: Claude pops, a small Claude flies up and its portal opens, for this long.
 const ARRIVE_MS = 2600
 // The universe's name stays in the middle this long after landing.
@@ -56,11 +64,16 @@ const INTRO_MS = 5200
 const PORTALS = 3
 
 // The module's own variables start over on a reload, and `session.start` puts the desk back to idle to match.
-let shown: Activity = 'idle'
-let wanted: Activity = 'idle'
+let shown: Act = 'idle'
+let wanted: Act = 'idle'
 let shownAt = Number.NEGATIVE_INFINITY
 let pending: Timer | undefined
 let settling: Timer | undefined
+// Back to waiting after a short moment (listening, the !, a jump, a sweep), unless a turn began meanwhile.
+let calming: Timer | undefined
+let dozing: Timer | undefined
+// A turn of the main loop is running: Claude is busy, so your typing doesn't turn its head.
+let working = false
 let arrived: Timer | undefined
 let introduced: Timer | undefined
 // Each running subagent and the universe its Claude comes from; null past the last portal.
@@ -79,18 +92,34 @@ function roll(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0]! / 2 ** 32
 }
 
-async function write($: EngineInterface, activity: Activity): Promise<void> {
+async function write($: EngineInterface, activity: Act): Promise<void> {
   if (activity === shown) {
     return
   }
 
   shown = activity
   shownAt = performance.now()
+  dozing?.cancel()
+  dozing = undefined
+
+  if (activity === 'idle') {
+    dozeLater($)
+  }
+
   await update($, desk, was => ({ ...was, activity }))
 }
 
+/** Claude nods off if it is still waiting for you after `SLEEP_MS`. */
+function dozeLater($: EngineInterface): void {
+  dozing?.cancel()
+  dozing = $.clock.after(SLEEP_MS, () => {
+    dozing = undefined
+    show($, 'sleeping').catch(() => undefined)
+  })
+}
+
 /** Asks for a state: drawn now if the one on screen has had its time, else as soon as it has. The latest ask wins. */
-async function show($: EngineInterface, activity: Activity): Promise<void> {
+async function show($: EngineInterface, activity: Act): Promise<void> {
   if (activity === wanted) {
     return
   }
@@ -122,9 +151,40 @@ function settle($: EngineInterface): void {
   })
 }
 
-/** What Claude does at the desk for a tool: flips the notebook to read, presses Enter to run, raises the antenna for the web. */
-function activityOfTool(tool: string): Activity {
-  if (/^(Read|Grep|Glob|LS|NotebookRead)$/.test(tool)) {
+/** Back to waiting after `ms`, unless a turn has begun by then. */
+function calmAfter($: EngineInterface, ms: number): void {
+  calming?.cancel()
+  calming = $.clock.after(ms, () => {
+    calming = undefined
+
+    if (!working) {
+      show($, 'idle').catch(() => undefined)
+    }
+  })
+}
+
+/**
+ * What Claude does at the desk for a tool: asks you, fills a diff card to edit, passes a magnifier over its eyes to
+ * search, ticks a checklist to plan, flips the notebook to read, presses Enter to run, raises the antenna for the web.
+ */
+function activityOfTool(tool: string): Act {
+  if (/^(AskUserQuestion|ExitPlanMode)$/.test(tool)) {
+    return 'asking'
+  }
+
+  if (/^(Edit|MultiEdit|Write|NotebookEdit)$/.test(tool)) {
+    return 'editing'
+  }
+
+  if (/^(Grep|Glob|ToolSearch)$/.test(tool)) {
+    return 'searching'
+  }
+
+  if (/^(TodoWrite|Task(Create|Update|List|Get)|EnterPlanMode)$/.test(tool) || /^mcp__.+__update_plan$/.test(tool)) {
+    return 'planning'
+  }
+
+  if (/^(Read|LS|NotebookRead)$/.test(tool)) {
     return 'read'
   }
 
@@ -327,6 +387,10 @@ export const register: Register = on => {
     shown = 'idle'
     wanted = 'idle'
     shownAt = Number.NEGATIVE_INFINITY
+    working = false
+    calming?.cancel()
+    calming = undefined
+    dozeLater($)
     agents.clear()
     arrived?.cancel()
     introduced?.cancel()
@@ -346,6 +410,24 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // You typing: Claude turns to watch the prompt box, three dots bouncing, and looks back a moment after your last
+  // key. The box answers first and the picture follows on its own, so no key ever waits on a redraw.
+  on('prompt.edit', async ($, e, next) => {
+    const box = await next(e)
+
+    if (!working) {
+      const typing = box.text.trim() !== ''
+
+      show($, typing ? 'listening' : 'idle').catch(() => undefined)
+
+      if (typing) {
+        calmAfter($, LISTEN_MS)
+      }
+    }
+
+    return box
+  })
+
   on('prompt.submit', async ($, e, next) => {
     const text = e.text.trim()
     settling?.cancel()
@@ -353,6 +435,12 @@ export const register: Register = on => {
     // A slash command is no prompt: `/effort ultracode` tells its outcome in its output row.
     if (!text.startsWith('/') && /\bultra(code|think)\b/i.test(text)) {
       await update($, ultra, was => ({ ...was, turn: true }))
+    }
+
+    // Heard you: an ! pops over its head. A prompt that starts no turn lets it settle back by itself.
+    if (!working && text !== '') {
+      await quietly($, () => show($, 'heard'))
+      calmAfter($, HEARD_MS)
     }
 
     return next(e)
@@ -381,6 +469,9 @@ export const register: Register = on => {
     }
 
     settling?.cancel()
+    calming?.cancel()
+    calming = undefined
+    working = true
     await show($, 'thinking')
 
     return next(e)
@@ -392,7 +483,7 @@ export const register: Register = on => {
     }
 
     for await (const chunk of next(e)) {
-      const activity: Activity | undefined =
+      const activity: Act | undefined =
         chunk.kind === 'thinking'
           ? 'thinking'
           : chunk.kind === 'text'
@@ -425,6 +516,17 @@ export const register: Register = on => {
     return result
   })
 
+  // A call put to you for approval: Claude raises a hand under a ? until the tool runs or the turn moves on.
+  on('tool.check', async ($, e, next) => {
+    const verdict = await next(e)
+
+    if (e.agentId === undefined && e.tool_use_id !== undefined && e.approver === 'person' && verdict.decision === 'ask') {
+      await quietly($, () => show($, 'asking'))
+    }
+
+    return verdict
+  })
+
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) {
       await leave($, e.agentId)
@@ -433,9 +535,12 @@ export const register: Register = on => {
     }
 
     await update($, ultra, was => (was.turn ? { ...was, turn: false } : was))
+    working = false
 
     if (e.isAborted) {
-      await show($, 'idle')
+      // Stopped mid-turn: it jumps, eyes wide, then waits for you again.
+      await show($, 'startled')
+      calmAfter($, STARTLE_MS)
     } else {
       await show($, e.reason === 'answer' ? 'done' : 'error')
       settle($)
@@ -458,12 +563,22 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // Compacting: Claude sweeps the desk while the summary is written, and the pile is gone after.
   on('session.compact', async ($, e, next) => {
+    const main = e.agentId === undefined
+
+    if (main) {
+      await quietly($, () => show($, 'tidying'))
+    }
+
     const result = await next(e)
 
-    await quietly($, async () => {
-      await update($, desk, was => ({ ...was, clutter: 0 }))
-    })
+    if (main) {
+      await quietly($, async () => {
+        await update($, desk, was => ({ ...was, clutter: 0 }))
+        await show($, working ? 'thinking' : 'idle')
+      })
+    }
 
     return result
   })

@@ -1,4 +1,4 @@
-import type { Activity } from '../../types'
+import type { Act, Activity } from '../../types'
 import { f, gear, random } from './kit'
 
 // Claude at the desk, drawn in the desk's own 420×460 box (x right, y down; the floor at 456). One builder serves the
@@ -50,10 +50,33 @@ export type Rig = {
 }
 
 export type P = readonly [number, number]
-type Look = 'screen' | 'window' | 'up' | 'down' | 'x' | 'happy'
+type Look = 'screen' | 'window' | 'up' | 'down' | 'antenna' | 'prompt' | 'x' | 'happy' | 'wide' | 'shut'
 /** Where an arm is, in cells, and how it moves. */
 type Nub = { col: number; row: number; w?: number; h?: number; cls?: string; style?: string }
-type Pose = { look: Look; near: Nub; far: Nub; body?: string; blink: boolean }
+/** `body`: classes on the whole critter, outermost first, one group each. `gaze`: how the eyes move around `look`. */
+type Pose = { look: Look; near: Nub; far: Nub; body?: string; blink: boolean; gaze?: string }
+
+/** The activity each moment stands for: what a world's scenery, its machine and its CSS see. */
+export const BASE: Record<Act, Activity> = {
+  idle: 'idle',
+  thinking: 'thinking',
+  responding: 'responding',
+  tool: 'tool',
+  read: 'read',
+  run: 'run',
+  web: 'web',
+  error: 'error',
+  done: 'done',
+  listening: 'idle',
+  heard: 'idle',
+  asking: 'idle',
+  editing: 'tool',
+  searching: 'read',
+  planning: 'tool',
+  tidying: 'idle',
+  sleeping: 'idle',
+  startled: 'idle',
+}
 
 // The critter is pixel art on a 16-unit grid: a body ten cells wide and seven tall, a nub of an arm on each side, four
 // legs. Cell (0, 0) is at (38, 238), so it sits on the seat at 350 with its near arm on the keys at 262.
@@ -64,6 +87,8 @@ export const CORAL = '#d97757'
 const ULTRA_BODY = '#7d5cf0'
 const ERROR_LIGHT = '#e5484d'
 const DONE_LIGHT = '#3fbf6f'
+const ASK_LIGHT = '#f5b942'
+const SPARK = '#ffd23f'
 
 const typing = (seconds: number): Pose => ({
   look: 'screen',
@@ -72,24 +97,57 @@ const typing = (seconds: number): Pose => ({
   blink: true,
 })
 
-const POSE_OF: Record<Activity, Pose> = {
-  // Waiting for you: an arm on the desk, looking out of the window, blinking.
-  idle: { look: 'window', near: { col: 12, row: 4.5 }, far: { col: 0, row: 4 }, body: 'breathe', blink: true },
-  thinking: { look: 'up', near: { col: 12, row: 4.5 }, far: { col: 0, row: 2.5 }, body: 'sway', blink: true },
-  responding: typing(0.34),
-  tool: typing(0.15),
-  web: typing(0.15),
-  read: { look: 'down', near: { col: 12, row: 4, cls: 'flip' }, far: { col: 0, row: 4 }, blink: true },
-  run: { look: 'screen', near: { col: 12, row: 4, cls: 'press' }, far: { col: 0, row: 4 }, body: 'squash', blink: false },
-  // Raised arms are one cell wide, up the sides past the top, so they read as arms and not ears.
-  error: { look: 'x', near: { col: 12, row: 4.5 }, far: { col: 1, row: -1.5, w: 1, h: 3, cls: 'scratch' }, body: 'shake', blink: false },
+const RESTING: Pick<Pose, 'near' | 'far'> = { near: { col: 12, row: 4.5 }, far: { col: 0, row: 4 } }
+// Raised arms are one cell wide, up the sides past the top, so they read as arms and not ears.
+const HAND_UP: Nub = { col: 1, row: -1.5, w: 1, h: 3 }
+const ARMS_UP: Pick<Pose, 'near' | 'far'> = { near: { col: 12, row: -1.25, w: 1, h: 4 }, far: { col: 1, row: -1.25, w: 1, h: 4 } }
+
+const POSE_OF: Record<Act, Pose> = {
+  // Waiting for you: looks out of the window, at its cup, at you; sips; stretches; on an 18 s loop.
+  idle: {
+    look: 'window',
+    gaze: 'cl-idle',
+    near: { col: 12, row: 4.5, cls: 'cl-sip' },
+    far: { col: 0, row: 4, cls: 'cl-reach' },
+    body: 'breathe',
+    blink: true,
+  },
+  // Eyes darting between ideas, a hand tapping its chin.
+  thinking: { look: 'up', gaze: 'cl-dart', near: { col: 12, row: 4.5 }, far: { col: 0, row: 2.5, cls: 'cl-chin' }, body: 'sway', blink: true },
+  // Typing, glancing over at the chat now and then.
+  responding: { ...typing(0.34), gaze: 'cl-glance' },
+  tool: { ...typing(0.15), gaze: 'cl-flick' },
+  // Typing fast with its eyes up on the antenna.
+  web: { ...typing(0.15), look: 'antenna' },
+  // Eyes running along the lines.
+  read: { look: 'down', gaze: 'cl-scan', near: { col: 12, row: 4, cls: 'flip' }, far: { col: 0, row: 4 }, blink: true },
+  // Presses Enter, leans back and watches the machines go, presses again.
+  run: { look: 'screen', gaze: 'cl-watch', near: { col: 12, row: 4, cls: 'cl-enter' }, far: { col: 0, row: 4 }, body: 'cl-back', blink: true },
+  // Flinches, then scratches its head, shaking, a drop of sweat running down.
+  error: { look: 'x', ...RESTING, far: { ...HAND_UP, cls: 'scratch' }, body: 'cl-flinch shake', blink: false },
   done: {
     look: 'happy',
-    near: { col: 12, row: -1.25, w: 1, h: 4, cls: 'wave' },
-    far: { col: 1, row: -1.25, w: 1, h: 4, cls: 'wave', style: 'animation-delay:-.4s' },
+    near: { ...ARMS_UP.near, cls: 'wave' },
+    far: { ...ARMS_UP.far, cls: 'wave', style: 'animation-delay:-.4s' },
     body: 'hop',
     blink: false,
   },
+  // You typing: it leans toward the prompt box and watches it.
+  listening: { look: 'prompt', ...RESTING, body: 'cl-lean', blink: true },
+  // You sent it: a jump, eyes wide.
+  heard: { look: 'wide', ...RESTING, body: 'cl-jump', blink: false },
+  // Your turn to answer: a hand up, head tilted, looking at you.
+  asking: { look: 'prompt', ...RESTING, far: { ...HAND_UP, cls: 'wave', style: 'animation-duration:1.2s' }, body: 'cl-tilt', blink: true },
+  editing: typing(0.22),
+  // Holding a magnifier up to its eyes, which flick about behind it.
+  searching: { look: 'screen', gaze: 'cl-flick', near: { col: 12, row: 4 }, far: { col: 0, row: 4 }, blink: true },
+  // Typing slowly, eyes up on the checklist.
+  planning: { ...typing(0.5), look: 'antenna' },
+  // Sweeping the desk with its near arm.
+  tidying: { look: 'down', near: { col: 12, row: 4, cls: 'cl-sweep' }, far: { col: 0, row: 4 }, blink: true },
+  sleeping: { look: 'shut', ...RESTING, body: 'cl-doze', blink: false },
+  // Stopped mid-turn: it jumps, arms up, eyes wide.
+  startled: { look: 'wide', ...ARMS_UP, body: 'cl-jolt', blink: false },
 }
 
 /** Where each machine's light comes from. */
@@ -107,10 +165,6 @@ export const RIG_STYLE =
   '.tap{animation:tap var(--ty,.34s) ease-in-out infinite alternate}' +
   '.tap2{animation-delay:calc(var(--ty,.34s) * -1)}' +
   '@keyframes tap{from{transform:translateY(0)}to{transform:translateY(-9px)}}' +
-  '.press{animation:press 1.4s ease-in-out infinite}' +
-  '@keyframes press{0%,55%,100%{transform:translateY(0)}68%{transform:translateY(-22px)}78%{transform:translateY(3px)}86%{transform:translateY(0)}}' +
-  '.squash{transform-box:fill-box;transform-origin:50% 100%;animation:squash 1.4s ease-in-out infinite}' +
-  '@keyframes squash{0%,74%,100%{transform:scale(1,1)}79%{transform:scale(1.04,.95)}88%{transform:scale(1,1)}}' +
   '.flip{animation:flip .55s ease-in-out infinite alternate}' +
   '@keyframes flip{from{transform:translateX(-12px)}to{transform:translateX(4px)}}' +
   '.scratch{animation:scratch .22s ease-in-out infinite alternate}' +
@@ -169,7 +223,75 @@ export const RIG_STYLE =
   // at most 1.25 flashes a second. Keep it under 3.
   '@keyframes ul-zap{0%,12%,100%{opacity:0}2%{opacity:.9}5%{opacity:.25}8%{opacity:.8}}' +
   '.ul-spark{opacity:0;animation:ul-spark 2s ease-out infinite}' +
-  '@keyframes ul-spark{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-190px);opacity:0}}'
+  '@keyframes ul-spark{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-190px);opacity:0}}' +
+  // Waiting: one 18 s loop for the eyes, the near arm (a sip, then a stretch), the far arm and the cup.
+  '.cl-idle{animation:cl-idle 18s ease-in-out infinite}' +
+  '@keyframes cl-idle{0%,28%,100%{transform:translate(0,0)}33%,44%{transform:translate(44px,6px)}49%,66%{transform:translate(4px,14px)}71%,84%{transform:translate(16px,-8px)}}' +
+  '.cl-sip{animation:cl-sip 18s ease-in-out infinite}' +
+  '@keyframes cl-sip{0%,30%,47%,70%,88%,100%{transform:translate(0,0)}34%,44%{transform:translate(0,-36px)}74%,84%{transform:translate(4px,-58px)}}' +
+  '.cl-reach{animation:cl-reach 18s ease-in-out infinite}' +
+  '@keyframes cl-reach{0%,70%,88%,100%{transform:translate(0,0)}74%,84%{transform:translate(-4px,-62px)}}' +
+  '.cl-hcup{opacity:0;animation:cl-hcup 18s linear infinite}' +
+  '@keyframes cl-hcup{0%,31%,46%,100%{opacity:0}33%,44%{opacity:1}}' +
+  '.cl-cup{animation:cl-cup 18s linear infinite}' +
+  '@keyframes cl-cup{0%,31%,46%,100%{opacity:1}33%,44%{opacity:0}}' +
+  // The eyes at work.
+  '.cl-dart{animation:cl-dart 5.2s ease-in-out infinite}' +
+  '@keyframes cl-dart{0%,30%,90%,100%{transform:translate(0,0)}35%,58%{transform:translate(-14px,2px)}63%,86%{transform:translate(14px,-2px)}}' +
+  '.cl-chin{animation:cl-chin 1.3s ease-in-out infinite}' +
+  '@keyframes cl-chin{50%{transform:translateY(-4px)}}' +
+  '.cl-glance{animation:cl-glance 7s ease-in-out infinite}' +
+  '@keyframes cl-glance{0%,72%,92%,100%{transform:translate(0,0)}76%,88%{transform:translate(-30px,10px)}}' +
+  '.cl-flick{animation:cl-flick 1.7s steps(1) infinite}' +
+  '@keyframes cl-flick{0%{transform:translate(0,0)}40%{transform:translate(6px,-3px)}70%{transform:translate(-4px,2px)}}' +
+  '.cl-scan{animation:cl-scan 2.7s linear infinite}' +
+  '@keyframes cl-scan{0%,100%{transform:translate(-8px,0)}30%{transform:translate(8px,0)}33.3%{transform:translate(-8px,4px)}63%{transform:translate(8px,4px)}66.6%{transform:translate(-8px,8px)}97%{transform:translate(8px,8px)}}' +
+  '.cl-enter{animation:cl-enter 5s ease-in-out infinite}' +
+  '@keyframes cl-enter{0%,16%,100%{transform:translateY(0)}7%{transform:translateY(-22px)}11%{transform:translateY(3px)}}' +
+  '.cl-back{animation:cl-back 5s ease-in-out infinite}' +
+  '@keyframes cl-back{0%,16%,94%,100%{transform:translate(0,0)}26%,86%{transform:translate(-5px,-1px)}}' +
+  '.cl-watch{animation:cl-watch 5s ease-in-out infinite}' +
+  '@keyframes cl-watch{0%,16%,94%,100%{transform:translate(0,0)}26%,86%{transform:translate(-26px,-12px)}}' +
+  // One-shot moves as a moment begins.
+  '.cl-flinch{animation:cl-flinch .5s ease-out both}' +
+  '@keyframes cl-flinch{30%{transform:translateY(-10px)}}' +
+  '.cl-jump{animation:cl-jump .6s ease-out both}' +
+  '@keyframes cl-jump{35%{transform:translateY(-16px)}70%{transform:translateY(2px)}}' +
+  '.cl-jolt{animation:cl-jolt .55s cubic-bezier(.2,.8,.4,1) both}' +
+  '@keyframes cl-jolt{30%{transform:translateY(-22px)}65%{transform:translateY(3px)}}' +
+  '.cl-lean{animation:cl-lean .5s ease-out both}' +
+  '@keyframes cl-lean{to{transform:translate(-6px,1px)}}' +
+  '.cl-in{transform-box:fill-box;transform-origin:50% 100%;animation:cl-in .4s cubic-bezier(.3,1.5,.5,1) both}' +
+  '@keyframes cl-in{from{transform:scale(0)}}' +
+  '.cl-tilt{transform-box:fill-box;transform-origin:50% 100%;animation:cl-tilt 3s ease-in-out infinite alternate}' +
+  '@keyframes cl-tilt{from{transform:rotate(-3deg)}to{transform:rotate(1deg)}}' +
+  '.cl-doze{animation:cl-doze 4.8s ease-in-out infinite}' +
+  '@keyframes cl-doze{50%{transform:translateY(4px)}}' +
+  '.cl-sweep{animation:cl-sweep .7s ease-in-out infinite alternate}' +
+  '@keyframes cl-sweep{to{transform:translateX(34px)}}' +
+  // What goes with each moment: the dots, the cards, the magnifier, the Zs, the sweat, the confetti.
+  '.cl-dot{animation:cl-dot 1s ease-in-out infinite}' +
+  '@keyframes cl-dot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}' +
+  '.cl-bob{animation:cl-bob 1.6s ease-in-out infinite alternate}' +
+  '@keyframes cl-bob{to{transform:translateY(-4px)}}' +
+  '.cl-ink{stroke-dasharray:1;animation:cl-ink 3s ease-out infinite both}' +
+  '@keyframes cl-ink{0%{stroke-dashoffset:1;opacity:1}22%,82%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}' +
+  '.cl-mag{transform-box:fill-box;transform-origin:100% 100%;animation:cl-mag 1.8s ease-in-out infinite alternate}' +
+  '@keyframes cl-mag{from{transform:rotate(-10deg)}to{transform:rotate(14deg)}}' +
+  '.cl-z,.cl-cf,.cl-fly,.cl-puff,.cl-shock{opacity:0;transform-box:fill-box;transform-origin:center}' +
+  '.cl-z{animation:cl-z 4.5s ease-out infinite}' +
+  '@keyframes cl-z{0%{opacity:0;transform:translate(0,0) scale(.6)}20%{opacity:.9}100%{opacity:0;transform:translate(34px,-64px) scale(1.3)}}' +
+  '.cl-cf{animation:cl-cf 1.8s cubic-bezier(.2,.7,.4,1) both}' +
+  '@keyframes cl-cf{0%{opacity:0;transform:translate(0,0) rotate(0)}12%,75%{opacity:1}100%{opacity:0;transform:translate(var(--cx),var(--cy)) rotate(var(--cr))}}' +
+  '.cl-fly{animation:cl-fly 1.5s ease-in infinite}' +
+  '@keyframes cl-fly{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:.9}100%{opacity:0;transform:translate(var(--fx),var(--fy)) rotate(var(--fr))}}' +
+  '.cl-puff{animation:cl-puff 1.2s ease-out infinite}' +
+  '@keyframes cl-puff{0%{opacity:0;transform:translate(0,0) scale(.5)}30%{opacity:.7}100%{opacity:0;transform:translate(8px,-24px) scale(1.6)}}' +
+  '.cl-sweat{opacity:0;animation:cl-sweat 1.6s ease-in infinite}' +
+  '@keyframes cl-sweat{0%{opacity:0;transform:translateY(0)}25%{opacity:.9}100%{opacity:0;transform:translateY(20px)}}' +
+  // Two small bursts a second apart: well under three flashes a second.
+  '.cl-shock{animation:cl-shock .9s ease-out 2 both}' +
+  '@keyframes cl-shock{0%{opacity:0;transform:scale(.6)}25%{opacity:1}100%{opacity:0;transform:scale(1.25)}}'
 
 /** A cell's rectangle, in cells from the critter's corner. */
 export function cell(col: number, row: number, w = 1, h = 1, attributes = ''): string {
@@ -193,15 +315,22 @@ export function mix(a: string, b: string, by: number): string {
 }
 
 /** Where the eyes sit for each way of looking: the two columns and the top row, in cells. */
-const GAZE: Record<'screen' | 'window' | 'up' | 'down', readonly [number, number, number]> = {
+const GAZE: Record<'screen' | 'window' | 'up' | 'down' | 'antenna' | 'prompt', readonly [number, number, number]> = {
   screen: [6, 9, 2],
   window: [4, 7, 1.5],
   up: [5, 8, 1],
   down: [6, 9, 3],
+  // Up and to the right: the antenna, a card over the machine.
+  antenna: [6.5, 9.5, 0.75],
+  // Down and to the left, where the chat's prompt box is.
+  prompt: [4, 7, 2.5],
 }
 
-/** The eyes, by where they look: two tall pixels, an ✕ each on an error, a ^ each when done. */
-function eyes(look: Look, color: string, blink: boolean): string {
+/**
+ * The eyes, by where they look: two tall pixels, an ✕ each on an error, a ^ each when done, big and shining when
+ * surprised, a line each asleep. `gaze` moves them around where they look.
+ */
+function eyes(look: Look, color: string, blink: boolean, gaze?: string): string {
   const half = U / 2
   const sub = (col: number, row: number, cells: readonly P[]) =>
     cells.map(([x, y]) => `<rect x="${f(X0 + col * U + x * half)}" y="${f(Y0 + row * U + y * half)}" width="${half}" height="${half}"/>`).join('')
@@ -218,9 +347,24 @@ function eyes(look: Look, color: string, blink: boolean): string {
     return `<g fill="${color}">${sub(4.75, 2.25, arc)}${sub(8.25, 2.25, arc)}</g>`
   }
 
+  if (look === 'wide') {
+    const shine = ' fill="#ffffff" fill-opacity=".85"'
+
+    return (
+      `<g fill="${color}">${cell(4.75, 1.25, 1.5, 2.5)}${cell(8, 1.25, 1.5, 2.5)}</g>` +
+      cell(4.9, 1.45, 0.4, 0.4, shine) +
+      cell(8.15, 1.45, 0.4, 0.4, shine)
+    )
+  }
+
+  if (look === 'shut') {
+    return `<g fill="${color}">${cell(4.75, 3, 1.5, 0.375)}${cell(8, 3, 1.5, 0.375)}</g>`
+  }
+
   const [left, right, row] = GAZE[look]
   const pair = cell(left, row, 1, 2) + cell(right, row, 1, 2)
-  const moved = look === 'window' ? `<g class="peek">${pair}</g>` : pair
+  const moving = gaze ?? (look === 'window' ? 'peek' : undefined)
+  const moved = moving === undefined ? pair : `<g class="${moving}">${pair}</g>`
 
   return `<g fill="${color}"${blink ? ' class="blink"' : ''}>${moved}</g>`
 }
@@ -304,7 +448,10 @@ const HEAD_TOP: Record<Head, number> = {
 function critter(rig: Rig, pose: Pose, color: string, light: string, bright: boolean): { body: string; near: string } {
   if (rig.handsOnly === true) {
     // Nothing left but the arms and the eyes, which the screen lights.
-    return { body: `<g class="cr">${nub(pose.far, color)}${eyes(pose.look, light, pose.blink)}</g>`, near: `<g class="cr">${nub(pose.near, color)}</g>` }
+    return {
+      body: `<g class="cr">${nub(pose.far, color)}${eyes(pose.look, light, pose.blink, pose.gaze)}</g>`,
+      near: `<g class="cr">${nub(pose.near, color)}</g>`,
+    }
   }
 
   const wear = rig.wear === undefined ? accessory(rig, light) : { behind: rig.wear.behind ?? '', front: rig.wear.front ?? '' }
@@ -316,7 +463,7 @@ function critter(rig: Rig, pose: Pose, color: string, light: string, bright: boo
   return {
     body:
       `<g class="cr">${wear.behind}${nub(pose.far, color)}<g fill="${color}">${cell(2, 0, 10, 7)}${legs}</g>${lit}` +
-      `${eyes(pose.look, mix(rig.ink, '#000000', 0.4), pose.blink)}${wear.front}</g>`,
+      `${eyes(pose.look, mix(rig.ink, '#000000', 0.4), pose.blink, pose.gaze)}${wear.front}</g>`,
     near: `<g class="cr">${nub(pose.near, color)}</g>`,
   }
 }
@@ -410,11 +557,24 @@ function machine(rig: Rig, light: string, activity: Activity): string {
   }
 }
 
-/** The screen's light in a state: its color, how strong it gets, and its rhythm. */
-function lightOf(rig: Rig, activity: Activity): { color: string; level: number; cls: string; seconds: number } {
+/** The screen's light in a moment: its color, how strong it gets, and its rhythm. */
+function lightOf(rig: Rig, activity: Act): { color: string; level: number; cls: string; seconds: number } {
   switch (activity) {
     case 'idle':
       return { color: rig.light.idle, level: 0.34, cls: 'gl', seconds: 7 }
+    case 'listening':
+      return { color: rig.light.idle, level: 0.38, cls: 'gl', seconds: 5 }
+    case 'sleeping':
+      return { color: rig.light.idle, level: 0.16, cls: 'gl', seconds: 9 }
+    case 'heard':
+    case 'tidying':
+      return { color: rig.light.work, level: 0.46, cls: 'gl-once', seconds: 2.4 }
+    case 'asking':
+      return { color: ASK_LIGHT, level: 0.46, cls: 'gl', seconds: 2.4 }
+    case 'startled':
+      return { color: ASK_LIGHT, level: 0.5, cls: 'gl-once', seconds: 2.4 }
+    case 'planning':
+      return { color: rig.light.work, level: 0.56, cls: 'gl', seconds: 1.6 }
     case 'thinking':
       return { color: rig.light.work, level: 0.46, cls: 'gl', seconds: 3.2 }
     case 'responding':
@@ -607,7 +767,7 @@ function aura(id: string): { behind: string; front: string } {
 }
 
 export type DeskState = {
-  activity: Activity
+  activity: Act
   clutter: number
   ultra: boolean
   /** A subagent is being born this moment: Claude pops and a small Claude flies off toward its portal. */
@@ -624,32 +784,235 @@ function hatchling(color: string, eyes: string): string {
   )
 }
 
+/** Just over the head, from the top of what it wears, never above the band's top edge (150). */
+function over(top: number): number {
+  return Math.max(top - 12, 200)
+}
+
+/** A bubble left of the head, its tail toward the prompt box, three dots bouncing: you are typing. */
+function dots(rig: Rig, top: number): string {
+  const x = 26
+  const y = over(top) - 34
+
+  return (
+    `<g class="cl-in"><path d="M${x + 8} ${y} h44 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-30 l-10 8 v-8 h-4 a8 8 0 0 1 -8 -8 v-12 a8 8 0 0 1 8 -8z" ` +
+    `fill="${rig.paper}" fill-opacity=".92" stroke="${rig.ink}" stroke-width="2"/>` +
+    [0, 1, 2].map(index => `<circle class="cl-dot" style="animation-delay:${index * 0.15}s" cx="${x + 18 + index * 12}" cy="${y + 14}" r="3.5" fill="${rig.ink}"/>`).join('') +
+    '</g>'
+  )
+}
+
+/** An ! popping up over the head. */
+function bang(rig: Rig, top: number): string {
+  const y = over(top)
+
+  return (
+    `<g class="cl-in" fill="${SPARK}" stroke="${rig.ink}" stroke-width="3" paint-order="stroke">` +
+    `<rect x="143" y="${y - 46}" width="14" height="28"/><rect x="143" y="${y - 14}" width="14" height="12"/></g>`
+  )
+}
+
+/** A pixel ? in an amber bubble, up where the raised hand points. */
+function question(rig: Rig, top: number): string {
+  const y = over(top) - 50
+  const mark: P[] = [[1, 0], [2, 0], [0, 1], [3, 1], [3, 2], [2, 3], [2, 5]]
+
+  return (
+    `<g class="cl-bob"><g class="cl-in"><rect x="24" y="${y}" width="48" height="44" rx="10" fill="${ASK_LIGHT}" stroke="${rig.ink}" stroke-width="2"/>` +
+    `<g fill="${rig.ink}">${mark.map(([col, row]) => `<rect x="${36 + col * 6}" y="${y + 4 + row * 6}" width="6" height="6"/>`).join('')}</g></g></g>`
+  )
+}
+
+/** A card hanging over the machine, a bar along its top, `rows` drawn on it. */
+function card(rig: Rig, rows: string): string {
+  return (
+    `<g class="cl-in"><g transform="translate(300 160)"><rect width="96" height="58" rx="5" fill="${rig.paper}" fill-opacity=".94" stroke="${rig.ink}" stroke-width="2"/>` +
+    `<rect x="1" y="1" width="94" height="9" rx="4" fill="${rig.ink}" fill-opacity=".28"/>${rows}</g></g>`
+  )
+}
+
+/** A diff writing itself: a line out in red, two in green, one kept. */
+function diff(rig: Rig): string {
+  const lines: [string, number][] = [[ERROR_LIGHT, 62], [DONE_LIGHT, 74], [DONE_LIGHT, 50], [rig.ink, 66]]
+
+  return card(
+    rig,
+    lines
+      .map(([color, width], index) => {
+        const y = 19 + index * 10
+
+        return (
+          `<rect x="6" y="${y - 3}" width="5" height="5" fill="${color}"/>` +
+          `<line class="cl-ink" pathLength="1" style="animation-delay:${f(index * 0.35)}s" x1="16" y1="${y}" x2="${16 + width}" y2="${y}" stroke="${color}" stroke-width="5"/>`
+        )
+      })
+      .join(''),
+  )
+}
+
+/** A checklist ticking itself off. */
+function checklist(rig: Rig): string {
+  return card(
+    rig,
+    [58, 44, 52]
+      .map((width, index) => {
+        const y = 16 + index * 14
+
+        return (
+          `<rect x="8" y="${y}" width="9" height="9" fill="none" stroke="${rig.ink}" stroke-width="2"/>` +
+          `<path class="cl-ink" pathLength="1" style="animation-delay:${f(index * 0.6)}s" d="M9 ${y + 4} l3 4 l7 -9" fill="none" stroke="${DONE_LIGHT}" stroke-width="3"/>` +
+          `<line x1="24" y1="${y + 5}" x2="${24 + width}" y2="${y + 5}" stroke="${rig.ink}" stroke-opacity=".45" stroke-width="4"/>`
+        )
+      })
+      .join(''),
+  )
+}
+
+/** A magnifier held up from the near hand, swinging across the eyes. */
+function lens(rig: Rig, light: string): string {
+  return (
+    `<g class="cl-mag"><line x1="184" y1="297" x2="236" y2="322" stroke="${rig.metal}" stroke-width="7" stroke-linecap="round"/>` +
+    `<circle cx="166" cy="286" r="22" fill="${light}" fill-opacity=".2" stroke="${rig.metal}" stroke-width="6"/>` +
+    `<path d="M152 276 q6 -8 16 -8" fill="none" stroke="#ffffff" stroke-opacity=".5" stroke-width="3"/></g>`
+  )
+}
+
+/** Papers flying off the desk's far end and dust puffing up where the arm sweeps. */
+function sweepings(rig: Rig): string {
+  const paper = `fill="${rig.paper}" fill-opacity=".7"`
+  const papers: [number, number, number, number, number, number][] = [
+    [388, 318, 52, 70, 40, 0],
+    [404, 322, 66, 96, -30, -0.5],
+    [376, 324, 40, 110, 70, -1],
+  ]
+  const dust: P[] = [[300, -0.2], [324, -0.9], [350, -0.5]]
+
+  return (
+    papers
+      .map(
+        ([x, y, fx, fy, fr, delay]) =>
+          `<rect class="cl-fly" style="--fx:${fx}px;--fy:${fy}px;--fr:${fr}deg;animation-delay:${delay}s" x="${x}" y="${y}" width="30" height="4" ${paper}/>`,
+      )
+      .join('') +
+    dust.map(([x, delay]) => `<circle class="cl-puff" style="animation-delay:${delay}s" cx="${x}" cy="324" r="5" ${paper}/>`).join('')
+  )
+}
+
+/** Zs rising from the head. */
+function snores(rig: Rig, top: number): string {
+  const y = over(top) - 6
+
+  return [0, 1, 2]
+    .map(
+      index =>
+        `<path class="cl-z" style="animation-delay:${f(-index * 1.5)}s" d="M200 ${y} h11 l-11 11 h11" fill="none" stroke="${rig.paper}" stroke-width="3"/>`,
+    )
+    .join('')
+}
+
+/** A drop of sweat running down the near side of the head. */
+function sweat(): string {
+  return `<path class="cl-sweat" d="M222 ${Y0 + 6} q6 9 0 13 q-6 -4 0 -13z" fill="#8fd3ff"/>`
+}
+
+/** Three short strokes bursting out around the head, twice. */
+function shock(top: number): string {
+  const y = over(top) + 4
+  const strokes: [number, number, number, number][] = [[96, y, -10, -12], [150, y - 18, 0, -16], [204, y, 10, -12]]
+
+  return (
+    `<g stroke="${SPARK}" stroke-width="4" stroke-linecap="round">` +
+    strokes.map(([x, from, dx, dy]) => `<line class="cl-shock" x1="${x}" y1="${from}" x2="${x + dx}" y2="${from + dy}"/>`).join('') +
+    '</g>'
+  )
+}
+
+/** Confetti bursting up from the head, once. */
+function confetti(top: number): string {
+  const next = random(23)
+  const colors = [CORAL, DONE_LIGHT, SPARK, '#7cc4ff']
+  const y = over(top) - 4
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const angle = Math.PI * (0.08 + (0.84 * index) / 11)
+    const reach = 60 + next() * 50
+    const style =
+      `--cx:${f(-Math.cos(angle) * reach * 1.4)}px;--cy:${f(-Math.sin(angle) * reach * 0.6 - 6)}px;` +
+      `--cr:${f((next() - 0.5) * 540)}deg;animation-delay:${f(next() * 0.25)}s`
+
+    return `<rect class="cl-cf" style="${style}" x="147" y="${y}" width="7" height="${index % 3 === 0 ? 7 : 4}" fill="${colors[index % 4]}"/>`
+  }).join('')
+}
+
+/** What a moment draws besides Claude, over everything else at the desk. */
+function extras(rig: Rig, activity: Act, top: number, light: string): string {
+  switch (activity) {
+    case 'listening':
+      return dots(rig, top)
+    case 'heard':
+      return bang(rig, top)
+    case 'asking':
+      return question(rig, top)
+    case 'editing':
+      return diff(rig)
+    case 'planning':
+      return checklist(rig)
+    case 'searching':
+      return lens(rig, light)
+    case 'tidying':
+      return sweepings(rig)
+    case 'sleeping':
+      return snores(rig, top)
+    case 'startled':
+      return shock(top)
+    case 'error':
+      return rig.handsOnly === true ? '' : sweat()
+    case 'done':
+      return confetti(top)
+    default:
+      return ''
+  }
+}
+
 /**
  * Claude at the desk in one state. `id` keeps gradient names apart when one document draws two desks. `bright` draws
  * the critter in its own color, unshaded (the band, where it is small and wants to read crisp).
  */
 export function deskScene(rig: Rig, state: DeskState, id: string, bright = false): string {
-  const pose = POSE_OF[state.activity]
-  const light = lightOf(rig, state.activity)
+  const act = state.activity
+  const base = BASE[act]
+  const pose = POSE_OF[act]
+  const light = lightOf(rig, act)
   const handsOnly = rig.handsOnly === true
   const color = state.ultra ? ULTRA_BODY : bright ? CORAL : mix(CORAL, rig.ink, 0.3)
   const body = critter(rig, pose, color, light.color, bright)
-  const moving = (inner: string) => (pose.body === undefined ? inner : `<g class="${pose.body}">${inner}</g>`)
+  const moving = (inner: string) =>
+    (pose.body ?? '')
+      .split(' ')
+      .filter(Boolean)
+      .reduceRight((within, cls) => `<g class="${cls}">${within}</g>`, inner)
   const top = rig.headTop ?? HEAD_TOP[rig.head]
   const ultra = state.ultra ? aura(id) : undefined
   const born = (inner: string) => (state.spawning === true ? `<g class="pop">${inner}</g>` : inner)
+  // Waiting, Claude now and then takes its cup off the desk for a sip: the desk's cup fades as one shows in its hand.
+  const sips = act === 'idle' && rig.cup !== 'none'
+  const cup = rig.cup === 'none' ? '' : `<g transform="translate(392 330)">${cupShape(rig.cup, rig.ink, light.color, rig.paper)}</g>`
+  const held = sips
+    ? `<g class="cl-sip"><g class="cl-hcup"><g transform="translate(252 320)">${cupShape(rig.cup, rig.ink, light.color, rig.paper)}</g></g></g>`
+    : ''
   const figure =
     (handsOnly ? '' : (rig.seatArt ?? seat(rig))) +
     born(moving(body.body)) +
     (rig.tableArt ?? table(rig)) +
-    (rig.cup === 'none' ? '' : `<g transform="translate(392 330)">${cupShape(rig.cup, rig.ink, light.color, rig.paper)}</g>`) +
+    (sips ? `<g class="cl-cup">${cup}</g>` : cup) +
     clutter(rig, state.clutter) +
-    (state.activity === 'read' ? notebook(rig) : '') +
-    (rig.device === undefined ? machine(rig, light.color, state.activity) : rig.device(light.color, state.activity)) +
-    born(moving(body.near)) +
+    (act === 'read' ? notebook(rig) : '') +
+    (rig.device === undefined ? machine(rig, light.color, base) : rig.device(light.color, base)) +
+    born(moving(body.near + held)) +
     (state.spawning === true ? hatchling(color, mix(rig.ink, '#000000', 0.4)) : '') +
-    (state.activity === 'web' && !handsOnly ? antenna([X0 + 10.5 * U, top], light.color, rig.metal) : '') +
-    (state.activity === 'thinking' && !handsOnly ? thoughts(rig.thought, [X0 + 7 * U, top - 10], rig.light.work) : '')
+    (act === 'web' && !handsOnly ? antenna([X0 + 10.5 * U, top], light.color, rig.metal) : '') +
+    (act === 'thinking' && !handsOnly ? thoughts(rig.thought, [X0 + 7 * U, top - 10], rig.light.work) : '') +
+    extras(rig, act, top, light.color)
 
   return (
     glow(id, rig.glowAt ?? MACHINES[rig.machine].glow, light.color, light.level, light.cls, light.seconds, handsOnly) +

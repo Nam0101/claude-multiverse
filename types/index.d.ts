@@ -10,8 +10,24 @@ export type Activity =
   | 'error' // screen flushes red, scratches head
   | 'done' // stretches, screen flushes green
 
+/**
+ * Everything Claude does at the desk: the activities, and finer moments each drawn as their own pose. A world's
+ * scenery and machine see the activity a moment stands for (rig.ts `BASE`), so every universe reacts to them.
+ */
+export type Act =
+  | Activity
+  | 'listening' // you are typing in the prompt box: it turns to watch, three dots bounce
+  | 'heard' // you sent a prompt: an ! pops over its head
+  | 'asking' // waiting on your answer or approval: a hand up, a ? in a bubble
+  | 'editing' // writing files: a diff card fills with lines
+  | 'searching' // searching the code: a magnifier passes over its eyes
+  | 'planning' // updating its plan: a checklist ticks itself off
+  | 'tidying' // compacting the conversation: sweeps the desk clear
+  | 'sleeping' // left alone a long while: dozes, Zzz
+  | 'startled' // you stopped it mid-turn: jumps, eyes wide
+
 export type Desk = {
-  activity: Activity
+  activity: Act
   /** The universes the running subagents' Claudes come from, oldest first, at most three: one portal each. */
   helpers: string[]
   /** The helper just born: Claude pops, a small Claude flies up and its portal opens. Null otherwise. */
